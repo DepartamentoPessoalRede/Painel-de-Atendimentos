@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Atendimentos — DP</title>
+<style>
+  :root{
+    --bg: #F7F6F5;
+    --panel: #FFFFFF;
+    --panel-2: #F7F6F5;
+    --panel-3: #F0EEEC;
+    --line: #E7E4E1;
+    --line-soft: #EEEBE8;
+    --ink: #201C1A;
+    --ink-dim: #756D69;
+    --ink-faint: #A39A95;
+    --brand: #D6293A;
+    --brand-2: #FF7A68;
+    --brand-dim: #F4CFC9;
+    --brand-mid: #E58880;
+    --brand-glow: rgba(214,41,58,0.06);
+    --ok: #1E9E68;
+    --warn: #B8730A;
+    --danger: #D6293A;
+    --danger-dim: #FBEAE8;
+    --warn-dim: #FBF1DD;
+    --ok-dim: #E3F5EC;
+    --pending: #7C6FA6;
+    --pending-dim: #F0ECF7;
+    --progress: #2D6CB0;
+    --progress-dim: #E7EFF8;
+    --shadow: rgba(30,20,18,0.07);
+    --radius: 10px;
+    --mono: 'JetBrains Mono', 'SF Mono', Consolas, monospace;
+    --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--sans);}
+  body{padding:28px 32px 60px;min-height:100vh;}
+  .wrap{max-width:1100px;margin:0 auto;}
+
+  header.hero{position:relative;overflow:hidden;border-radius:16px;padding:28px 34px;margin-bottom:24px;background:linear-gradient(135deg, #E6252B 0%, #FF3B3F 48%, #FF7A68 100%);box-shadow:0 8px 20px -10px rgba(230,37,43,0.35);}
+  .hero-wave{position:absolute;top:0;right:0;width:62%;height:100%;pointer-events:none;}
+  .hero-content{position:relative;max-width:640px;}
+  .hero-brand{display:flex;align-items:center;gap:8px;color:rgba(255,255,255,0.92);font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;margin:0 0 12px;}
+  .hero-mark{color:#fff;flex-shrink:0;}
+  header.hero h1{color:#fff;font-size:26px;font-weight:700;margin:0 0 8px;letter-spacing:-0.01em;}
+  .hero-sub{color:rgba(255,255,255,0.88);font-size:13.5px;margin:0;line-height:1.5;}
+  .hero-updated{position:relative;display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:11px;color:rgba(255,255,255,0.75);margin-top:18px;}
+  .refresh-btn{font-family:var(--sans);font-size:11.5px;font-weight:600;color:#fff;background:rgba(255,255,255,0.16);border:1px solid rgba(255,255,255,0.35);padding:5px 12px;border-radius:20px;cursor:pointer;transition:background .15s;}
+  .refresh-btn:hover{background:rgba(255,255,255,0.28);}
+  .load-state{padding:40px 20px;text-align:center;color:var(--ink-faint);font-size:13px;background:var(--panel);border:1px solid var(--line);border-radius:12px;}
+  .load-state.error{color:var(--danger);background:var(--danger-dim);border-color:var(--brand-dim);}
+  .retry-btn{font-family:var(--sans);font-size:12px;font-weight:600;color:#fff;background:var(--brand);border:none;padding:5px 12px;border-radius:6px;cursor:pointer;margin-left:8px;}
+  .retry-btn:hover{background:var(--brand-2);}
+
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px;}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;position:relative;overflow:hidden;box-shadow:0 1px 3px var(--shadow);}
+  .kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+  .kpi.k-total::before{background:var(--brand);}
+  .kpi.k-late::before{background:var(--danger);}
+  .kpi.k-expired::before{background:var(--warn);}
+  .kpi.k-pending::before{background:var(--pending);}
+  .kpi.k-progress::before{background:var(--progress);}
+  .kpi.k-done::before{background:var(--ok);}
+  .kpi .label{font-size:10.5px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;}
+  .kpi .value{font-size:24px;font-weight:700;font-family:var(--mono);letter-spacing:-0.02em;}
+  .kpi .value.late{color:var(--danger);}
+  .kpi .value.expired{color:var(--warn);}
+  .kpi .value.pending{color:var(--pending);}
+  .kpi .value.progress{color:var(--progress);}
+  .kpi .value.done{color:var(--ok);}
+  .kpi .pct{font-size:10.5px;color:var(--ink-faint);margin-top:3px;}
+
+  .panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+  .panel-head h2{font-size:14px;margin:0;text-transform:uppercase;letter-spacing:.06em;color:var(--ink);font-weight:600;}
+
+  .legend{display:flex;gap:16px;font-size:12px;color:var(--ink-dim);}
+  .legend span{display:inline-flex;align-items:center;gap:6px;}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .dot.late{background:var(--danger);}
+  .dot.expired{background:var(--warn);}
+  .dot.pending{background:var(--pending);}
+  .dot.progress{background:var(--progress);}
+  .dot.done{background:var(--ok);}
+
+  .sort-row{display:flex;gap:8px;margin-bottom:14px;}
+  .sort-btn{background:var(--panel-2);border:1px solid var(--line);color:var(--ink-dim);font-family:var(--sans);font-size:11.5px;padding:6px 12px;border-radius:6px;cursor:pointer;transition:all .15s;}
+  .sort-btn:hover{color:var(--ink);border-color:var(--brand-dim);}
+  .sort-btn.active{color:var(--brand);border-color:var(--brand);background:var(--brand-glow);}
+
+  /* ---- Process accordion ---- */
+  .process-list{display:flex;flex-direction:column;gap:10px;margin-bottom:40px;}
+  .process-item{border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden;transition:border-color .15s, box-shadow .15s;box-shadow:0 1px 3px var(--shadow);}
+  .process-item.expanded{box-shadow:0 4px 16px -4px var(--shadow);}
+  .process-item.expanded{border-color:var(--brand-dim);}
+
+  .process-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:15px 18px;cursor:pointer;user-select:none;}
+  .process-row:hover{background:rgba(255,255,255,0.02);}
+  .process-row .left{display:flex;align-items:center;gap:12px;min-width:0;}
+  .chevron{flex-shrink:0;width:9px;height:9px;border-right:2px solid var(--ink-faint);border-bottom:2px solid var(--ink-faint);transform:rotate(-45deg);transition:transform .2s, border-color .2s;margin-left:2px;}
+  .process-item.expanded .chevron{transform:rotate(45deg);border-color:var(--brand);}
+  .process-name-block{min-width:0;}
+  .process-name{font-weight:700;font-size:14.5px;color:var(--ink);letter-spacing:-.01em;}
+  .process-sub{font-family:var(--mono);font-size:10.5px;color:var(--ink-faint);margin-top:2px;}
+
+  .process-row .right{display:flex;align-items:center;gap:14px;flex-shrink:0;}
+  .mini-bar{width:80px;height:5px;border-radius:3px;overflow:hidden;background:var(--line);display:flex;}
+  .mini-bar .seg{height:100%;}
+  .seg-late{background:var(--danger);}
+  .seg-expired{background:var(--warn);}
+  .seg-pending{background:var(--pending);}
+  .seg-progress{background:var(--progress);}
+  .seg-done{background:var(--ok);}
+  .issue-pill{font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--danger);background:var(--danger-dim);border-radius:20px;padding:3px 10px;white-space:nowrap;}
+  .issue-pill.clear{color:var(--ok);background:var(--ok-dim);}
+
+  .process-body{display:none;border-top:1px solid var(--line);padding:14px 18px 18px;background:var(--panel-2);}
+  .process-item.expanded .process-body{display:block;}
+
+  .etapa-filter-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+  .etapa-filter-row label{font-size:12px;font-weight:600;color:var(--ink-dim);}
+  .etapa-select{font-family:var(--sans);font-size:12.5px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:7px 10px;cursor:pointer;flex:1;min-width:220px;}
+  .etapa-select:hover{border-color:var(--brand-dim);}
+  .etapa-select:focus{outline:none;border-color:var(--brand);}
+
+  .inline-detail{background:var(--bg);border:1px solid var(--line-soft);border-radius:8px;padding:10px 12px;}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  thead th{text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:600;padding:7px 8px;border-bottom:1px solid var(--line);}
+  tbody td{padding:8px 8px;border-bottom:1px solid var(--line-soft);color:var(--ink);vertical-align:middle;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover td{background:rgba(255,255,255,0.015);}
+  .badge{font-family:var(--mono);font-size:10px;padding:2.5px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.03em;font-weight:600;display:inline-block;}
+  .badge-atrasado{color:var(--danger);background:var(--danger-dim);}
+  .badge-expirado{color:var(--warn);background:var(--warn-dim);}
+  .badge-pendente{color:var(--pending);background:var(--pending-dim);}
+  .badge-andamento{color:var(--progress);background:var(--progress-dim);}
+  .badge-finalizado{color:var(--ok);background:var(--ok-dim);}
+  .badge-outros{color:var(--ink-dim);background:var(--panel-3);}
+  .id-cell{font-family:var(--mono);color:var(--ink-dim);font-size:11.5px;}
+  .link-btn{font-family:var(--mono);font-size:11px;color:var(--brand);text-decoration:none;border:1px solid var(--brand-dim);padding:3px 9px;border-radius:6px;display:inline-flex;align-items:center;gap:5px;transition:all .15s;white-space:nowrap;}
+  .link-btn:hover{background:var(--brand);color:#FFFFFF;border-color:var(--brand);}
+  .empty-state{text-align:center;padding:20px;color:var(--ink-faint);font-size:12.5px;}
+
+  ::-webkit-scrollbar{height:8px;width:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+
+  @media (max-width:800px){
+    .kpis{grid-template-columns:repeat(2,1fr);}
+    body{padding:16px;}
+    .process-row .right{gap:8px;}
+    .mini-bar{width:50px;}
+    header.hero{padding:24px 20px;}
+    .hero-wave{width:100%;opacity:.6;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <svg class="hero-wave" viewBox="0 0 420 200" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M -20 150 C 40 150, 60 90, 100 90 C 140 90, 150 150, 190 150 C 230 150, 250 40, 300 40 C 330 40, 320 90, 360 90 C 390 90, 400 60, 440 60"
+            fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="14" stroke-linecap="round"/>
+    </svg>
+    <div class="hero-content">
+      <div class="hero-brand">
+        <svg class="hero-mark" viewBox="0 0 24 24" width="16" height="16" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="12" r="10.5" fill="none" stroke="currentColor" stroke-width="1.6"/>
+          <path d="M6.5 13.5c1.2 0 1.8-2.5 3-2.5s1.8 2.5 3 2.5 1.8-2.5 3-2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+        <span>Departamento Pessoal · Rede Decisão</span>
+      </div>
+      <h1>Painel de Atendimentos</h1>
+      <p class="hero-sub">Clique num processo para abrir os detalhes. Use o filtro de etapa para ver só uma parte do fluxo.</p>
+    </div>
+    <div class="hero-updated">
+      <span id="updatedAt"></span>
+      <button class="refresh-btn" id="refreshBtn">↻ Atualizar</button>
+    </div>
+  </header>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div>
+    <div class="panel-head">
+      <h2>Atendimentos por processo</h2>
+      <div class="legend">
+        <span><span class="dot late"></span>Atrasado</span>
+        <span><span class="dot pending"></span>Pendente</span>
+        <span><span class="dot progress"></span>Em andamento</span>
+        <span><span class="dot expired"></span>Expirado</span>
+        <span><span class="dot done"></span>Finalizado</span>
+      </div>
+    </div>
+    <div class="sort-row">
+      <button class="sort-btn active" data-sort="issues">Mais pendências primeiro</button>
+      <button class="sort-btn" data-sort="total">Mais atendimentos primeiro</button>
+      <button class="sort-btn" data-sort="alpha">Ordem alfabética</button>
+    </div>
+    <div class="process-list" id="processList"></div>
+  </div>
+
+</div>
+
+<script>
+const DATA_URL = "https://script.google.com/macros/s/AKfycby_8xEmpa5_yr84daldd8sK4-mlmsmsaKykeV1nm-kQPslvsR3ogA_BzgoXK0en-JJF/exec";
+let DATA = [];
+
+// Tenta achar o valor de um campo testando várias variações de nome (a planilha/Apps Script pode nomear diferente)
+function pickField(row, candidates){
+  const keys = Object.keys(row);
+  for(const cand of candidates){
+    const found = keys.find(k => k.toLowerCase().replace(/[\s_]/g,'') === cand.toLowerCase().replace(/[\s_]/g,''));
+    if(found !== undefined && row[found] !== undefined && row[found] !== null) return String(row[found]).trim();
+  }
+  return '';
+}
+
+// Normaliza o status para bater com Atrasado / Pendente / Em andamento / Expirado / Finalizado
+function normalizeStatus(raw){
+  const s = (raw||'').trim().toLowerCase();
+  if(s.includes('atras')) return 'Atrasado';
+  if(s.includes('expir')) return 'Expirado';
+  if(s.includes('andamento')) return 'Em andamento';
+  if(s.includes('pend')) return 'Pendente';
+  if(s.includes('final')) return 'Finalizado';
+  return raw ? raw.trim() : '';
+}
+
+// Configuração central de status: chave usada internamente -> rótulo, classe css, cor
+const STATUS_META = {
+  'Atrasado':      {key:'atrasado',   seg:'seg-late',     dot:'late',     badge:'badge-atrasado'},
+  'Pendente':      {key:'pendente',   seg:'seg-pending',  dot:'pending',  badge:'badge-pendente'},
+  'Em andamento':  {key:'andamento',  seg:'seg-progress', dot:'progress', badge:'badge-andamento'},
+  'Expirado':      {key:'expirado',   seg:'seg-expired',  dot:'expired',  badge:'badge-expirado'},
+  'Finalizado':    {key:'finalizado', seg:'seg-done',     dot:'done',     badge:'badge-finalizado'},
+};
+function statusMeta(status){
+  return STATUS_META[status] || {key:'outros', seg:'', dot:'', badge:'badge-outros'};
+}
+// Um atendimento "pendente de atenção" é qualquer um que não esteja Finalizado
+function isOpenStatus(status){
+  return status !== 'Finalizado';
+}
+
+// Interpreta datas em vários formatos possíveis: ISO "2026-06-18 14:21:22" (com espaço ou T)
+// ou formato brasileiro "18/06/2026 14:21:22" / "18/06/2026". Retorna um objeto Date ou null.
+function parseDate(s){
+  if(!s) return null;
+  s = String(s).trim();
+  if(!s) return null;
+
+  // ISO: 2026-06-18[ ou T]14:21:22
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}:\d{2}(:\d{2})?))?/);
+  if(m){
+    const time = m[4] ? (m[4].length === 5 ? m[4]+':00' : m[4]) : '00:00:00';
+    const d = new Date(`${m[1]}-${m[2]}-${m[3]}T${time}`);
+    if(!isNaN(d)) return d;
+  }
+
+  // Brasileiro: 18/06/2026[ ]14:21:22
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ ,T]+(\d{1,2}:\d{2}(:\d{2})?))?/);
+  if(m){
+    const day = m[1].padStart(2,'0');
+    const month = m[2].padStart(2,'0');
+    let time = m[4] || '00:00:00';
+    if(time.length === 5) time += ':00';
+    const d = new Date(`${m[3]}-${month}-${day}T${time}`);
+    if(!isNaN(d)) return d;
+  }
+
+  // último recurso: deixa o próprio JS tentar
+  const fallback = new Date(s);
+  return isNaN(fallback) ? null : fallback;
+}
+
+function normalizeRow(row){
+  return {
+    id: pickField(row, ['id_atendimento','id','idAtendimento','codigo']),
+    categoria: pickField(row, ['categoria_atendimento','categoria','category']),
+    status: normalizeStatus(pickField(row, ['status_atendimento','status'])),
+    unidade: pickField(row, ['unidade','unit']),
+    data_ocorrencia: pickField(row, ['data_ocorrencia','dataOcorrencia','data_abertura','dataAbertura']) || pickField(row, ['created_at','createdAt']),
+    data_expiracao: pickField(row, ['data_expiracao','dataExpiracao','data_vencimento']),
+    atendente: pickField(row, ['nome_atendente','atendente','nomeAtendente','responsavel']),
+    aluno: pickField(row, ['aluno','nome_aluno']),
+    link_externo: pickField(row, ['link_externo','linkExterno']),
+  };
+}
+
+// Aceita diferentes formatos de resposta: array direto, {data:[...]}, {atendimentos:[...]}, ou array de arrays com cabeçalho
+function extractRows(json){
+  let raw = json;
+  if(!Array.isArray(raw)){
+    if(Array.isArray(raw.data)) raw = raw.data;
+    else if(Array.isArray(raw.atendimentos)) raw = raw.atendimentos;
+    else if(Array.isArray(raw.rows)) raw = raw.rows;
+    else if(Array.isArray(raw.result)) raw = raw.result;
+    else throw new Error('Formato de resposta não reconhecido (esperava um array de atendimentos).');
+  }
+  if(raw.length === 0) return [];
+  // array de arrays com cabeçalho na primeira linha
+  if(Array.isArray(raw[0])){
+    const headers = raw[0].map(h => String(h).trim());
+    return raw.slice(1).map(r => {
+      const obj = {};
+      headers.forEach((h,i) => obj[h] = r[i]);
+      return obj;
+    });
+  }
+  return raw;
+}
+
+async function loadData(){
+  const listEl = document.getElementById('processList');
+  const kpisEl = document.getElementById('kpis');
+  const updEl = document.getElementById('updatedAt');
+  listEl.innerHTML = '<div class="load-state">Carregando atendimentos…</div>';
+  kpisEl.innerHTML = '';
+  updEl.textContent = 'Atualizando…';
+  try{
+    const resp = await fetch(DATA_URL, {cache:'no-store'});
+    if(!resp.ok) throw new Error('Erro HTTP ' + resp.status);
+    const json = await resp.json();
+    const rows = extractRows(json);
+    DATA = rows.map(normalizeRow).filter(r => r.id);
+    if(DATA.length === 0){
+      listEl.innerHTML = '<div class="load-state error">A planilha respondeu, mas nenhum atendimento foi reconhecido. Confira os nomes das colunas na fonte de dados.</div>';
+    }
+    updEl.textContent = 'Atualizado às ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    renderKpis();
+    render();
+  }catch(err){
+    listEl.innerHTML = `<div class="load-state error">Não foi possível carregar os dados: ${err.message}. <button class="retry-btn" id="retryBtn">Tentar novamente</button></div>`;
+    updEl.textContent = 'Falha ao atualizar';
+    document.getElementById('retryBtn')?.addEventListener('click', loadData);
+  }
+}
+const LINK_BASE = "https://apollo.rededecisao.com/atividades/painel/atendimentos/ver/";
+
+// Mapa: categoria exata (como vem no sistema) -> [processo, etapa]
+const CATEGORY_MAP = {
+  "Admissão": ["Admissão", "Abertura"],
+  "Admissão - Análise preliminar": ["Admissão", "Análise preliminar"],
+  "Admissão - Entrega de Documentos": ["Admissão", "Entrega de documentos"],
+
+  "02 - Abertura turma com aumento de grade": ["Aumento de Grade", "Abertura de turma"],
+  "Aumento de Grade": ["Aumento de Grade", "Abertura"],
+  "Aumento de Grade - Triagem DP": ["Aumento de Grade", "Triagem DP"],
+  "Aumento de Grade - Carta de atribuição": ["Aumento de Grade", "Carta de atribuição"],
+  "Aumento de Grade - Validação de carta": ["Aumento de Grade", "Validação de carta"],
+
+  "10 - Redução de grade": ["Redução de Grade", "Abertura"],
+  "Redução de Grade - Tratamento de DP": ["Redução de Grade", "Tratamento de DP"],
+
+  "14 - Licenças Maternidade": ["Licenças e Saúde", "Licença maternidade"],
+  "Licenças e Saúde - Triagem": ["Licenças e Saúde", "Triagem"],
+
+  "25 - Reposição de Uniforme": ["Uniformes", "Reposição"],
+  "Solicitação de Uniforme - Tratativa do DP": ["Uniformes", "Tratativa DP (solicitação)"],
+  "Devoluções de Uniformes de Colaboradores": ["Uniformes", "Devolução"],
+
+  "26 - Solicitação de Benefícios": ["Benefícios", "Abertura solicitação"],
+  "Solicitação de Benefícios - Tratativa de DP": ["Benefícios", "Tratativa DP"],
+  "Solicitação de Benefícios - Tratativa Externa": ["Benefícios", "Tratativa externa"],
+  "Cancelamento de Benefícios - Tratativa de DP": ["Benefícios", "Cancelamento - Tratativa DP"],
+
+  "Mobilidade": ["Mobilidade", "Abertura"],
+  "Mobilidade  - Triagem DP": ["Mobilidade", "Triagem DP"],
+  "Mobilidade - Carta de Mobilidade": ["Mobilidade", "Carta de mobilidade"],
+  "Mobilidade - Validação da Carta": ["Mobilidade", "Validação da carta"],
+  "Mobilidade - Retorno Carta": ["Mobilidade", "Retorno da carta"],
+
+  "Processo de Demissão": ["Processo de Demissão", "Abertura"],
+  "Processo de Demissão - Análise de DP": ["Processo de Demissão", "Análise de DP"],
+  "Processo de Demissão - Análise de G&D": ["Processo de Demissão", "Análise de G&D"],
+  "Processo de Demissão - Análise Financeira": ["Processo de Demissão", "Análise financeira"],
+  "Processo de Demissão - Aprovação do Gestor": ["Processo de Demissão", "Aprovação do gestor"],
+  "Processo de Demissão - Preparação de Documentos DP": ["Processo de Demissão", "Preparação de documentos"],
+  "Processo de Demissão - Cancelamento de Acessos": ["Processo de Demissão", "Cancelamento de acessos"],
+  "Processo de Demissão - Aguardando resposta do solicitante": ["Processo de Demissão", "Aguardando resposta do solicitante"],
+  "Processo de Demissão - Processo de Homologação e Envio de Documentos": ["Processo de Demissão", "Homologação e envio de documentos"],
+
+  "Gestão de Headcount e Movimentações - Aprovação (G&D)": ["Gestão de Headcount e Movimentações", "Aprovação (G&D)"],
+  "Gestão de Headcount e Movimentações - Tratamento de DP": ["Gestão de Headcount e Movimentações", "Tratamento de DP"],
+
+  "Solicitações para o DP": ["Outras solicitações", "Solicitações gerais"],
+};
+
+function getProcessoEtapa(categoria){
+  if(CATEGORY_MAP[categoria]) return CATEGORY_MAP[categoria];
+  const parts = categoria.split(' - ');
+  if(parts.length > 1){
+    const prefix = parts[0].trim();
+    // Evita usar um código numérico legado (ex: "30") como se fosse o nome do processo —
+    // nesse caso é melhor tratar a categoria inteira como um processo de etapa única
+    // até que alguém mapeie ela manualmente no CATEGORY_MAP.
+    if(/^\d+$/.test(prefix)){
+      return [categoria, 'Etapa única'];
+    }
+    return [prefix, parts.slice(1).join(' - ').trim()];
+  }
+  return [categoria, 'Etapa única'];
+}
+
+function fmtDate(iso){
+  const d = parseDate(iso);
+  if(!d) return "—";
+  return d.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'numeric'}) + ' ' + d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+
+// (o timestamp "Atualizado às" é definido dentro de loadData())
+
+// ---- KPIs ----
+function renderKpis(){
+  const total = DATA.length;
+  const counts = {};
+  DATA.forEach(d => { counts[d.status] = (counts[d.status]||0) + 1; });
+  const pct = n => total ? ((n/total)*100).toFixed(1)+'%' : '0%';
+  const n = s => counts[s] || 0;
+
+  const kpis = [
+    {cls:'k-total',    label:'Total de atendimentos', value:total,             valCls:'',         pct:''},
+    {cls:'k-late',     label:'Atrasados',             value:n('Atrasado'),     valCls:'late',     pct: pct(n('Atrasado'))+' do total'},
+    {cls:'k-pending',  label:'Pendentes',             value:n('Pendente'),     valCls:'pending',  pct: pct(n('Pendente'))+' do total'},
+    {cls:'k-progress', label:'Em andamento',          value:n('Em andamento'), valCls:'progress', pct: pct(n('Em andamento'))+' do total'},
+    {cls:'k-expired',  label:'Expirados',             value:n('Expirado'),     valCls:'expired',  pct: pct(n('Expirado'))+' do total'},
+    {cls:'k-done',     label:'Finalizados',           value:n('Finalizado'),   valCls:'done',     pct: pct(n('Finalizado'))+' do total'},
+  ];
+  document.getElementById('kpis').innerHTML = kpis.map(k => `
+    <div class="kpi ${k.cls}">
+      <div class="label">${k.label}</div>
+      <div class="value ${k.valCls}">${k.value}</div>
+      <div class="pct">${k.pct}</div>
+    </div>
+  `).join('');
+}
+
+// ---- Grouping ----
+function groupByCategory(){
+  const map = {};
+  DATA.forEach(d=>{
+    if(!map[d.categoria]) map[d.categoria] = {categoria:d.categoria, counts:{}, total:0};
+    map[d.categoria].counts[d.status] = (map[d.categoria].counts[d.status]||0) + 1;
+    map[d.categoria].total++;
+  });
+  return Object.values(map);
+}
+
+function groupByProcess(){
+  const cats = groupByCategory();
+  const processes = {};
+  const stageOrder = Object.keys(CATEGORY_MAP);
+
+  cats.forEach(c=>{
+    const [processo, etapa] = getProcessoEtapa(c.categoria);
+    if(!processes[processo]){
+      processes[processo] = {processo, stages:[], counts:{}, total:0};
+    }
+    processes[processo].stages.push({...c, etapa});
+    Object.keys(c.counts).forEach(st=>{
+      processes[processo].counts[st] = (processes[processo].counts[st]||0) + c.counts[st];
+    });
+    processes[processo].total += c.total;
+  });
+
+  Object.values(processes).forEach(p=>{
+    p.stages.sort((a,b)=>{
+      const ia = stageOrder.indexOf(a.categoria);
+      const ib = stageOrder.indexOf(b.categoria);
+      return (ia===-1?999:ia) - (ib===-1?999:ib);
+    });
+  });
+
+  return Object.values(processes);
+}
+
+// quantos itens de um objeto {counts,total} não estão Finalizados
+function openCount(entry){
+  return entry.total - (entry.counts['Finalizado']||0);
+}
+
+// gera os segmentos coloridos de uma mini-barra de proporção a partir de counts/total
+function renderMiniBar(entry){
+  const total = entry.total || 1;
+  return Object.keys(STATUS_META).map(status=>{
+    const n = entry.counts[status] || 0;
+    if(!n) return '';
+    const meta = statusMeta(status);
+    const pctWidth = (n/total*100);
+    return `<div class="seg ${meta.seg}" style="width:${pctWidth}%"></div>`;
+  }).join('');
+}
+
+// ---- State ----
+let expandedProcess = null;    // nome do processo aberto
+let etapaFilter = '';          // categoria exata selecionada no filtro de etapa ('' = todas as etapas)
+let currentSort = 'issues';
+
+function sortProcesses(procs){
+  const arr = [...procs];
+  if(currentSort === 'issues'){
+    arr.sort((a,b)=> openCount(b) - openCount(a) || b.total - a.total);
+  } else if(currentSort === 'total'){
+    arr.sort((a,b)=> b.total - a.total);
+  } else {
+    arr.sort((a,b)=> a.processo.localeCompare(b.processo,'pt-BR'));
+  }
+  return arr;
+}
+
+function buildTable(rows, showEtapaCol){
+  if(rows.length === 0){
+    return `<div class="empty-state">✓ Nenhum atendimento em aberto (atrasado, pendente, em andamento ou expirado) aqui.</div>`;
+  }
+  rows = [...rows].sort((a,b)=> (parseDate(b.data_ocorrencia)||0) - (parseDate(a.data_ocorrencia)||0));
+  return `
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Status</th>
+          ${showEtapaCol ? '<th>Etapa</th>' : ''}
+          <th>Unidade</th>
+          <th>Atendente</th>
+          <th>Ocorrência</th>
+          <th>Expiração</th>
+          <th>Link</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows.map(r => `
+          <tr>
+            <td class="id-cell">#${r.id}</td>
+            <td><span class="badge ${statusMeta(r.status).badge}">${r.status}</span></td>
+            ${showEtapaCol ? `<td>${getProcessoEtapa(r.categoria)[1]}</td>` : ''}
+            <td>${r.unidade || '—'}</td>
+            <td>${r.atendente || '—'}</td>
+            <td>${fmtDate(r.data_ocorrencia)}</td>
+            <td>${fmtDate(r.data_expiracao)}</td>
+            <td><a class="link-btn" href="${r.link_externo || (LINK_BASE + r.id)}" target="_blank" rel="noopener">Abrir ↗</a></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderProcess(p){
+  const issues = openCount(p);
+  const isExpanded = expandedProcess === p.processo;
+  const badge = issues > 0
+    ? `<span class="issue-pill">${issues} pendente${issues===1?'':'s'}</span>`
+    : `<span class="issue-pill clear">em dia</span>`;
+
+  let body = '';
+  if(isExpanded){
+    // filtro: '' = todas as etapas do processo, ou uma categoria exata específica
+    const rows = DATA.filter(d=>{
+      const matchProc = getProcessoEtapa(d.categoria)[0] === p.processo;
+      const matchEtapa = etapaFilter === '' || d.categoria === etapaFilter;
+      return matchProc && matchEtapa && isOpenStatus(d.status);
+    });
+    const showEtapaCol = etapaFilter === ''; // só mostra a coluna Etapa quando estamos vendo todas juntas
+
+    body = `
+      <div class="process-body">
+        <div class="etapa-filter-row">
+          <label>Etapa:</label>
+          <select class="etapa-select" data-proc="${encodeURIComponent(p.processo)}">
+            <option value="" ${etapaFilter===''?'selected':''}>Todas as etapas (${issues} pendente${issues===1?'':'s'})</option>
+            ${p.stages.map(s => {
+              const stOpen = openCount(s);
+              return `<option value="${encodeURIComponent(s.categoria)}" ${etapaFilter===s.categoria?'selected':''}>${s.etapa} (${stOpen} pendente${stOpen===1?'':'s'})</option>`;
+            }).join('')}
+          </select>
+        </div>
+        <div class="inline-detail">${buildTable(rows, showEtapaCol)}</div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="process-item ${isExpanded?'expanded':''}">
+      <div class="process-row" data-proc-toggle="${encodeURIComponent(p.processo)}">
+        <div class="left">
+          <span class="chevron"></span>
+          <div class="process-name-block">
+            <div class="process-name">${p.processo}</div>
+            <div class="process-sub">${p.stages.length} etapa${p.stages.length===1?'':'s'} · ${p.total} atendimento${p.total===1?'':'s'}</div>
+          </div>
+        </div>
+        <div class="right">
+          <div class="mini-bar">${renderMiniBar(p)}</div>
+          ${badge}
+        </div>
+      </div>
+      ${body}
+    </div>
+  `;
+}
+
+function render(){
+  const processes = sortProcesses(groupByProcess());
+  document.getElementById('processList').innerHTML = processes.map(renderProcess).join('');
+
+  document.querySelectorAll('[data-proc-toggle]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      const proc = decodeURIComponent(el.getAttribute('data-proc-toggle'));
+      if(expandedProcess === proc){
+        expandedProcess = null;
+      } else {
+        expandedProcess = proc;
+      }
+      etapaFilter = '';
+      render();
+    });
+  });
+
+  document.querySelectorAll('.etapa-select').forEach(el=>{
+    el.addEventListener('click', (e)=> e.stopPropagation());
+    el.addEventListener('change', (e)=>{
+      etapaFilter = decodeURIComponent(e.target.value);
+      render();
+    });
+  });
+}
+
+document.querySelectorAll('.sort-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentSort = btn.getAttribute('data-sort');
+    render();
+  });
+});
+
+document.getElementById('refreshBtn').addEventListener('click', loadData);
+
+loadData();
+</script>
+</body>
+</html>
