@@ -287,7 +287,6 @@ function normalizeRow(row){
     data_expiracao: pickField(row, ['data_expiracao','dataExpiracao','data_vencimento']),
     atendente: pickField(row, ['nome_atendente','atendente','nomeAtendente','responsavel']),
     aluno: pickField(row, ['aluno','nome_aluno']),
-    link_externo: pickField(row, ['link_externo','linkExterno']),
   };
 }
 
@@ -541,7 +540,7 @@ function buildTable(rows, showEtapaCol){
             <td>${r.atendente || '—'}</td>
             <td>${fmtDate(r.data_ocorrencia)}</td>
             <td>${fmtDate(r.data_expiracao)}</td>
-            <td><a class="link-btn" href="${r.link_externo || (LINK_BASE + r.id)}" target="_blank" rel="noopener">Abrir ↗</a></td>
+            <td><a class="link-btn" href="${LINK_BASE + r.id}" target="_blank" rel="noopener">Abrir ↗</a></td>
           </tr>
         `).join('')}
       </tbody>
